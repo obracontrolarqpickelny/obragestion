@@ -42,6 +42,26 @@ const SK='obracalc_pro_v4';
 // Parámetro URL ?obra=NombreObra — para navegación obra-a-obra desde ObraControl
 const _urlObra=new URLSearchParams(window.location.search).get('obra')||'';
 
+/* ══════════ DRIVE SYNC ══════════ */
+// Completar DRIVE_URL con la URL del Apps Script después del deploy
+const DRIVE_URL='';
+const DRIVE_SECRET='obragestion_drive_2024';
+
+const _driveSave=async(obraName,data)=>{
+  if(!DRIVE_URL||!obraName)return false;
+  try{
+    const r=await fetch(DRIVE_URL,{method:'POST',redirect:'follow',body:JSON.stringify({secreto:DRIVE_SECRET,obraName,data})});
+    const j=await r.json();return!!j.ok;
+  }catch{return false;}
+};
+const _driveLoad=async(obraName)=>{
+  if(!DRIVE_URL||!obraName)return null;
+  try{
+    const r=await fetch(`${DRIVE_URL}?action=load&obra=${encodeURIComponent(obraName)}&secreto=${DRIVE_SECRET}`);
+    const j=await r.json();return j.ok?j.data:null;
+  }catch{return null;}
+};
+
 // __SNAP__: null en el archivo base.
 // Cuando el usuario hace "Guardar HTML", se embebe el estado completo aquí.
 // Cada archivo guardado lleva un _pid único → su propia clave en localStorage → sin conflictos entre obras.
@@ -2879,19 +2899,56 @@ function App(){
   const [lastSaved,setLastSaved]=useState(null);
   const [modified,setModified]=useState(false);
   const _initDone=useRef(false);
-  const _fileHandle=useRef(null);   // File System Access API — handle del archivo actual
-  const _guardarFn=useRef(null);    // ref para Ctrl+S sin closure stale
+  const _fileHandle=useRef(null);
+  const _guardarFn=useRef(null);
+  const _driveTimer=useRef(null);
+  const [driveStatus,setDriveStatus]=useState('idle'); // idle | loading | pending | saving | saved | error
 
-  // Auto-save: se dispara ante cualquier cambio de estado relevante
+  // Auto-save local + Drive auto-sync (debounce 15s)
   useEffect(()=>{
-    guardarStorage({tareas,rec,grupos,rubros,cfg,proyecto,cuadGrupos,cuadRubros,moItems,matIncr,prof,imprevistos,notaPDF});
+    const data={tareas,rec,grupos,rubros,cfg,proyecto,cuadGrupos,cuadRubros,moItems,matIncr,prof,imprevistos,notaPDF};
+    guardarStorage(data);
     setLastSaved(new Date());
+    if(DRIVE_URL&&_initDone.current&&proyecto){
+      if(_driveTimer.current)clearTimeout(_driveTimer.current);
+      setDriveStatus('pending');
+      _driveTimer.current=setTimeout(async()=>{
+        setDriveStatus('saving');
+        const ok=await _driveSave(proyecto,data);
+        setDriveStatus(ok?'saved':'error');
+        if(ok)setTimeout(()=>setDriveStatus('idle'),4000);
+      },15000);
+    }
   },[tareas,rec,grupos,rubros,cfg,proyecto,cuadGrupos,cuadRubros,moItems,matIncr,prof,imprevistos,notaPDF]);
 
   // Título de la pestaña Chrome — se actualiza con el nombre del proyecto
   useEffect(()=>{
     document.title=proyecto?`ObraGestión — ${proyecto}`:'ObraGestión v4';
   },[proyecto]);
+
+  // Carga inicial desde Drive (cuando se llega con ?obra=X desde ObraControl)
+  useEffect(()=>{
+    if(!DRIVE_URL||!_urlObra)return;
+    setDriveStatus('loading');
+    _driveLoad(_urlObra).then(d=>{
+      if(!d){setDriveStatus('idle');return;}
+      if(d.tareas)setTareas(d.tareas);
+      if(d.rec)setRec(d.rec);
+      if(d.grupos)setGrupos(d.grupos);
+      if(d.rubros)setRubros(d.rubros);
+      if(d.cfg)setCfg(d.cfg);
+      if(d.proyecto){setProyecto(d.proyecto);setNewP(d.proyecto);}
+      if(d.cuadGrupos)setCuadGrupos(d.cuadGrupos);
+      if(d.cuadRubros)setCuadRubros(d.cuadRubros);
+      if(d.moItems)setMoItems(d.moItems);
+      if(d.matIncr)setMatIncr(d.matIncr);
+      if(d.prof)setProf(d.prof);
+      if(d.imprevistos!=null)setImprevistos(d.imprevistos);
+      if(d.notaPDF)setNotaPDF(d.notaPDF);
+      setDriveStatus('saved');
+      setTimeout(()=>setDriveStatus('idle'),3000);
+    });
+  },[]);
 
   // Indicador de "modificado" (hay cambios sin guardar en el archivo HTML)
   useEffect(()=>{
@@ -3150,6 +3207,14 @@ function App(){
               title="Importar datos desde JSON o desde otro archivo HTML guardado"
               style={{...btnS(C.green),padding:"3px 8px",fontSize:"10px"}}>⬆ Importar</button>
             <input ref={importRef} type="file" accept=".json,.html" onChange={importarJSON} style={{display:"none"}}/>
+            {DRIVE_URL&&(
+              <span title={{idle:'Drive sincronizado',pending:'Cambios pendientes…',saving:'Guardando en Drive…',saved:'Guardado en Drive ✓',error:'Error de sincronización',loading:'Cargando desde Drive…'}[driveStatus]||''}
+                style={{fontSize:"10px",fontWeight:700,padding:"3px 8px",borderRadius:"4px",
+                  color:{idle:'#16a34a',pending:'#d97706',saving:'#2563eb',saved:'#16a34a',error:'#dc2626',loading:'#2563eb'}[driveStatus],
+                  background:{idle:'#16a34a18',pending:'#d9770618',saving:'#2563eb18',saved:'#16a34a18',error:'#dc262618',loading:'#2563eb18'}[driveStatus]}}>
+                {({idle:'☁ Drive',pending:'☁ …',saving:'☁ Guardando',saved:'☁ Guardado ✓',error:'☁ Error',loading:'☁ Cargando'})[driveStatus]}
+              </span>
+            )}
             <div style={{width:"1px",height:"20px",background:C.border,margin:"0 2px"}}/>
             <button onClick={()=>{setNewP(proyecto);setEditProy(true);}}
               style={{background:"transparent",border:`1px solid ${C.border}`,color:C.t2,
