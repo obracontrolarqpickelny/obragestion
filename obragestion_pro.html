@@ -22,48 +22,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 .editable-cell{cursor:pointer;border-radius:3px;transition:background .1s}
 .editable-cell:hover{background:rgba(37,99,235,.1)!important}
 .sth th{position:sticky;top:0;z-index:5}
-
-/* ─── ADAPTACIÓN A CELULAR ───────────────────────────────────────────
-   La app usa estilos inline de React, así que hace falta !important para
-   poder pisarlos. La regla clave es flex-wrap: sin ella las filas de
-   botones (▲rubro ▼rubro ✏ ✕rubro…) se salen de la pantalla y quedan
-   inalcanzables en un celular. */
-@media (max-width:760px){
-  html,body{overflow-x:hidden}
-
-  /* Que toda fila densa se acomode en varias líneas en vez de desbordarse.
-     Se excluyen los contenedores que ya scrollean a propósito (la barra de
-     pestañas), porque ahí el scroll horizontal es el comportamiento correcto. */
-  #root div[style*="display: flex"]:not([style*="overflow-x: auto"]):not([style*="overflow-x:auto"]){flex-wrap:wrap!important}
-
-  /* La barra de pestañas se desliza con el dedo, sin cortar */
-  #root div[style*="overflow-x: auto"]{-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  #root div[style*="overflow-x: auto"]::-webkit-scrollbar{height:0}
-
-  /* Los separadores verticales de la barra superior no aportan en móvil */
-  #root div[style*="width: 1px"][style*="height: 20px"]{display:none!important}
-
-  /* Botones: área tocable mínima cómoda con el dedo */
-  #root button{min-height:32px;line-height:1.15}
-
-  /* El nombre de obra en la barra puede usar todo el ancho disponible */
-  #root button[style*="max-width: 140px"]{max-width:60vw!important}
-
-  /* Tablas de cómputo: compactas para entrar en pantalla */
-  #root table{font-size:10px!important}
-  #root table th,#root table td{padding:4px 5px!important;white-space:nowrap}
-
-  /* Los campos de texto que se estiran no deben forzar filas larguísimas */
-  #root input[type=text],#root input:not([type]),#root select{min-width:0!important;max-width:100%}
-}
-
-/* Pantallas muy angostas: compactar todavía más */
-@media (max-width:420px){
-  #root{font-size:13px}
-  #root div[style*="padding: 10px 14px"]{padding:8px 10px!important}
-  #root div[style*="padding: 12px 14px"]{padding:10px 10px!important}
-  #root div[style*="padding: 8px 12px"]{padding:7px 9px!important}
-}
 </style>
 </head>
 <body>
@@ -3275,6 +3233,17 @@ function App(){
         </div>
       </div>
 
+      {DRIVE_URL&&(
+        <div title={{idle:'Drive sincronizado',pending:'Cambios pendientes…',saving:'Guardando en Drive…',saved:'Guardado en Drive ✓',error:'Error de sincronización',loading:'Cargando desde Drive…'}[driveStatus]||''}
+          style={{position:"fixed",bottom:"16px",right:"16px",zIndex:9999,
+            fontSize:"11px",fontWeight:800,padding:"6px 12px",borderRadius:"20px",
+            boxShadow:"0 2px 8px rgba(0,0,0,.18)",cursor:"default",
+            color:{idle:'#16a34a',pending:'#d97706',saving:'#2563eb',saved:'#16a34a',error:'#dc2626',loading:'#2563eb'}[driveStatus],
+            background:{idle:'#f0fdf4',pending:'#fffbeb',saving:'#eff6ff',saved:'#f0fdf4',error:'#fef2f2',loading:'#eff6ff'}[driveStatus],
+            border:`1.5px solid ${{idle:'#16a34a44',pending:'#d9770644',saving:'#2563eb44',saved:'#16a34a44',error:'#dc262644',loading:'#2563eb44'}[driveStatus]}`}}>
+          {({idle:'☁ Drive ✓',pending:'☁ pendiente…',saving:'☁ Guardando…',saved:'☁ Guardado ✓',error:'☁ Error Drive',loading:'☁ Cargando…'})[driveStatus]}
+        </div>
+      )}
       <div style={{padding:"12px 14px"}}>
         {tab==="rubros"    &&<EditorRubros grupos={grupos} setGrupos={setGrupos} rubros={rubros} setRubros={setRubros} tareas={tareas} setTareas={setTareas} rec={rec} setRec={setRec} proyecto={proyecto} moItems={moItems} setMoItems={setMoItems} prof={prof} nota={notaPDF}/>}
         {tab==="plan"      &&<PlanObra tc={tc} setTareas={setTareas} rec={rec} setRec={setRec} cfg={cfg} setCfg={setCfg} rubros={rubros} grupos={grupos} cuadGrupos={cuadGrupos} setCuadGrupos={setCuadGrupos} cuadRubros={cuadRubros} setCuadRubros={setCuadRubros} conflictos={conflictos} erroresMap={erroresMap} proyecto={proyecto} moItems={moItems} setMoItems={setMoItems} prof={prof} nota={notaPDF}/>}
