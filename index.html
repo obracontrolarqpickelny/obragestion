@@ -39,19 +39,25 @@ const C={
 /* ══════════ PERSISTENCIA ══════════ */
 const SK='obracalc_pro_v4';
 
+// Parámetro URL ?obra=NombreObra — para navegación obra-a-obra desde ObraControl
+const _urlObra=new URLSearchParams(window.location.search).get('obra')||'';
+
 // __SNAP__: null en el archivo base.
 // Cuando el usuario hace "Guardar HTML", se embebe el estado completo aquí.
 // Cada archivo guardado lleva un _pid único → su propia clave en localStorage → sin conflictos entre obras.
 const __SNAP__=/* @SNAP */null/* /@SNAP */;
-const _activeKey=__SNAP__?._pid?`obracalc_pro_v4_p_${__SNAP__._pid}`:SK;
+const _activeKey=__SNAP__?._pid?`obracalc_pro_v4_p_${__SNAP__._pid}`:_urlObra?`obracalc_pro_v4_w_${_urlObra.replace(/[^a-z0-9áéíóúüñÁÉÍÓÚÜÑ]/gi,'_').slice(0,32)}`:SK;
 
 function guardarStorage(data){
   try{localStorage.setItem(_activeKey,JSON.stringify(data));}catch(e){console.warn('localStorage:',e);}
 }
 
 const _saved=(()=>{
-  // Archivo base (sin __SNAP__) → siempre en blanco, no cargar localStorage
-  if(!__SNAP__)return null;
+  if(!__SNAP__){
+    // Versión web: cargar desde localStorage (clave por URL param o clave por defecto)
+    try{const r=localStorage.getItem(_activeKey);if(r)return JSON.parse(r);}catch{}
+    return null;
+  }
   // Archivo guardado → prioridad: localStorage con clave PID, luego snapshot embebido
   let d=null;
   try{const r=localStorage.getItem(_activeKey);if(r)d=JSON.parse(r);}catch{}
@@ -2859,7 +2865,7 @@ function App(){
   const [grupos,setGrupos]=useState(_saved?.grupos||DEMO_GRUPOS);
   const [rubros,setRubros]=useState(_saved?.rubros||DEMO_RUBROS);
   const [cfg,setCfg]=useState(_saved?.cfg||{fechaInicio:'',hsDia:8,sabado:false});
-  const [proyecto,setProyecto]=useState(_saved?.proyecto||'');
+  const [proyecto,setProyecto]=useState(_saved?.proyecto||_urlObra||'');
   const [cuadGrupos,setCuadGrupos]=useState(_saved?.cuadGrupos||{});
   const [cuadRubros,setCuadRubros]=useState(_saved?.cuadRubros||{});
   const [moItems,setMoItems]=useState(_saved?.moItems||{});
@@ -2869,7 +2875,7 @@ function App(){
   const PROF_DEFAULT={nombre:'Federico Pickelny',titulo:'Arquitecto',matricula:'MP 2304',telefono:'264 4397772',email:'federicopickelny@gmail.com',direccion:'B. Rivadavia Oeste 114'};
   const [prof,setProf]=useState(_saved?.prof||PROF_DEFAULT);
   const [editProy,setEditProy]=useState(false);
-  const [newP,setNewP]=useState(_saved?.proyecto||'');
+  const [newP,setNewP]=useState(_saved?.proyecto||_urlObra||'');
   const [lastSaved,setLastSaved]=useState(null);
   const [modified,setModified]=useState(false);
   const _initDone=useRef(false);
