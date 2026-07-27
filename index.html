@@ -22,6 +22,49 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 .editable-cell{cursor:pointer;border-radius:3px;transition:background .1s}
 .editable-cell:hover{background:rgba(37,99,235,.1)!important}
 .sth th{position:sticky;top:0;z-index:5}
+
+/* ═══ ADAPTACIÓN A CELULAR ═══════════════════════════════════════════
+   La app usa estilos inline de React: hace falta !important para pisarlos.
+   Objetivo: que cada fila entre en UNA línea. Si los botones no entran,
+   se van a un renglón nuevo y queda todo disperso y con huecos. */
+@media (max-width:760px){
+  html,body{overflow-x:hidden}
+
+  /* 1. Botones compactos: es lo que hace que la fila entre completa */
+  #root button{font-size:9.5px!important;padding:3px 6px!important;min-height:26px;line-height:1.1;white-space:nowrap}
+
+  /* 2. Permitir envolver sólo si aun así no entra (nunca cortar contenido).
+        Se excluye lo que scrollea a propósito, como la barra de pestañas. */
+  #root div[style*="display: flex"]:not([style*="overflow-x: auto"]):not([style*="overflow-x:auto"]){flex-wrap:wrap!important;gap:4px!important}
+
+  /* 3. El contador de ítems no debe acaparar el renglón y empujar los botones */
+  #root span[style*="flex: 1"]{flex:0 1 auto!important;min-width:0}
+
+  /* 4. Menos aire: los paneles ocupaban casi toda la pantalla en vertical */
+  #root div[style*="padding: 10px 14px"]{padding:7px 9px!important}
+  #root div[style*="padding: 12px 14px"]{padding:8px 9px!important}
+  #root div[style*="padding: 8px 12px"]{padding:6px 8px!important}
+  #root div[style*="padding: 10px 12px"]{padding:6px 8px!important}
+
+  /* 5. Los separadores verticales de la barra superior no aportan acá */
+  #root div[style*="width: 1px"][style*="height: 20px"]{display:none!important}
+
+  /* 6. El nombre de obra puede usar el ancho disponible */
+  #root button[style*="max-width: 140px"]{max-width:52vw!important}
+
+  /* 7. Barra de pestañas: se desliza con el dedo, sin barra visible */
+  #root div[style*="overflow-x: auto"]{-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #root div[style*="overflow-x: auto"]::-webkit-scrollbar{height:0}
+
+  /* 8. Tablas de cómputo: compactas y con scroll propio */
+  #root table{font-size:10px!important}
+  #root table th,#root table td{padding:3px 5px!important;white-space:nowrap}
+}
+
+@media (max-width:420px){
+  #root button{font-size:9px!important;padding:2px 5px!important}
+  #root input,#root select{font-size:12px!important;padding:5px 7px!important}
+}
 </style>
 </head>
 <body>
