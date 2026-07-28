@@ -112,7 +112,7 @@ const __SNAP__=/* @SNAP */null/* /@SNAP */;
 const _activeKey=__SNAP__?._pid?`obracalc_pro_v4_p_${__SNAP__._pid}`:_urlObra?`obracalc_pro_v4_w_${_urlObra.replace(/[^a-z0-9áéíóúüñÁÉÍÓÚÜÑ]/gi,'_').slice(0,32)}`:SK;
 
 function guardarStorage(data){
-  try{localStorage.setItem(_activeKey,JSON.stringify(data));}catch(e){console.warn('localStorage:',e);}
+  try{localStorage.setItem(_activeKey,JSON.stringify({...data,_ts:Date.now()}));}catch(e){console.warn('localStorage:',e);}
 }
 
 const _saved=(()=>{
@@ -3318,7 +3318,94 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+function HomePanel(){
+  const [obras,setObras]=React.useState(()=>{
+    const list=[];
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(key&&key.startsWith('obracalc_pro_v4_w_')){
+        try{
+          const d=JSON.parse(localStorage.getItem(key));
+          if(d&&d.proyecto)list.push({name:d.proyecto,key,ts:d._ts||0});
+        }catch{}
+      }
+    }
+    list.sort((a,b)=>b.ts-a.ts);
+    return list;
+  });
+  const [newName,setNewName]=React.useState('');
+  const openObra=n=>{ window.location.href='?obra='+encodeURIComponent(n); };
+  const delObra=(key,name)=>{
+    if(!window.confirm(`¿Eliminar "${name}" de este dispositivo?\nNo afecta lo guardado en Drive.`))return;
+    localStorage.removeItem(key);
+    setObras(p=>p.filter(o=>o.key!==key));
+  };
+  return(
+    <div style={{minHeight:'100vh',background:C.bg,fontFamily:'system-ui,sans-serif'}}>
+      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:'0 16px',
+        display:'flex',alignItems:'center',gap:'12px',height:'52px',
+        boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
+        <div style={{background:C.accent,borderRadius:'10px',width:'34px',height:'34px',
+          display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px',flexShrink:0}}>⊞</div>
+        <div>
+          <div style={{fontWeight:800,fontSize:'16px',color:C.t1,lineHeight:1}}>ObraGestión</div>
+          <div style={{fontSize:'10px',color:C.t3}}>v4 · gestión de obra</div>
+        </div>
+      </div>
+      <div style={{padding:'20px 16px',maxWidth:'800px',margin:'0 auto'}}>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:'12px',
+          padding:'16px',marginBottom:'24px'}}>
+          <div style={{fontWeight:700,fontSize:'11px',color:C.t3,marginBottom:'10px',
+            letterSpacing:'.5px'}}>NUEVA OBRA</div>
+          <div style={{display:'flex',gap:'8px'}}>
+            <input value={newName} onChange={e=>setNewName(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&newName.trim()&&openObra(newName.trim())}
+              placeholder="Nombre de la obra (ej: Casa García)"
+              style={{flex:1,border:`1px solid ${C.blue}55`,borderRadius:'7px',padding:'9px 12px',
+                background:`${C.blue}08`,color:C.t1,fontWeight:600,fontSize:'14px'}}/>
+            <button onClick={()=>newName.trim()&&openObra(newName.trim())}
+              style={{background:C.accent,color:'white',border:'none',borderRadius:'7px',
+                padding:'9px 18px',fontWeight:800,fontSize:'14px',cursor:'pointer'}}>
+              Crear →
+            </button>
+          </div>
+        </div>
+        <div style={{fontWeight:700,fontSize:'11px',color:C.t3,marginBottom:'12px',
+          letterSpacing:'.5px'}}>
+          {obras.length?`${obras.length} OBRA${obras.length!==1?'S':''} GUARDADA${obras.length!==1?'S':''} EN ESTE DISPOSITIVO`:'NO HAY OBRAS GUARDADAS EN ESTE DISPOSITIVO'}
+        </div>
+        <div style={{display:'grid',gap:'10px',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))'}}>
+          {obras.map(o=>(
+            <div key={o.key} style={{background:C.card,border:`1px solid ${C.border}`,
+              borderRadius:'11px',padding:'14px 16px',display:'flex',flexDirection:'column',
+              gap:'6px',boxShadow:'0 1px 4px rgba(0,0,0,.05)'}}>
+              <div style={{fontWeight:800,fontSize:'15px',color:C.t1}}>{o.name}</div>
+              {o.ts>0&&<div style={{fontSize:'10px',color:C.t3}}>
+                Guardado: {new Date(o.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}
+              </div>}
+              <div style={{display:'flex',gap:'6px',marginTop:'6px'}}>
+                <button onClick={()=>openObra(o.name)}
+                  style={{flex:1,background:C.accent,color:'white',border:'none',
+                    borderRadius:'7px',padding:'8px 0',fontWeight:800,fontSize:'14px',
+                    cursor:'pointer'}}>
+                  Abrir →
+                </button>
+                <button onClick={()=>delObra(o.key,o.name)}
+                  style={{background:'transparent',color:C.t3,border:`1px solid ${C.border}`,
+                    borderRadius:'7px',padding:'8px 12px',fontWeight:600,fontSize:'13px',
+                    cursor:'pointer'}}>✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  _urlObra ? <App/> : <HomePanel/>
+);
 </script>
 </body>
 </html>
