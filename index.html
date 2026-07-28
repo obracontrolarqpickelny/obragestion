@@ -22,49 +22,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 .editable-cell{cursor:pointer;border-radius:3px;transition:background .1s}
 .editable-cell:hover{background:rgba(37,99,235,.1)!important}
 .sth th{position:sticky;top:0;z-index:5}
-
-/* ═══ ADAPTACIÓN A CELULAR ═══════════════════════════════════════════
-   La app usa estilos inline de React: hace falta !important para pisarlos.
-   Objetivo: que cada fila entre en UNA línea. Si los botones no entran,
-   se van a un renglón nuevo y queda todo disperso y con huecos. */
-@media (max-width:760px){
-  html,body{overflow-x:hidden}
-
-  /* 1. Botones compactos: es lo que hace que la fila entre completa */
-  #root button{font-size:9.5px!important;padding:3px 6px!important;min-height:26px;line-height:1.1;white-space:nowrap}
-
-  /* 2. Permitir envolver sólo si aun así no entra (nunca cortar contenido).
-        Se excluye lo que scrollea a propósito, como la barra de pestañas. */
-  #root div[style*="display: flex"]:not([style*="overflow-x: auto"]):not([style*="overflow-x:auto"]){flex-wrap:wrap!important;gap:4px!important}
-
-  /* 3. El contador de ítems no debe acaparar el renglón y empujar los botones */
-  #root span[style*="flex: 1"]{flex:0 1 auto!important;min-width:0}
-
-  /* 4. Menos aire: los paneles ocupaban casi toda la pantalla en vertical */
-  #root div[style*="padding: 10px 14px"]{padding:7px 9px!important}
-  #root div[style*="padding: 12px 14px"]{padding:8px 9px!important}
-  #root div[style*="padding: 8px 12px"]{padding:6px 8px!important}
-  #root div[style*="padding: 10px 12px"]{padding:6px 8px!important}
-
-  /* 5. Los separadores verticales de la barra superior no aportan acá */
-  #root div[style*="width: 1px"][style*="height: 20px"]{display:none!important}
-
-  /* 6. El nombre de obra puede usar el ancho disponible */
-  #root button[style*="max-width: 140px"]{max-width:52vw!important}
-
-  /* 7. Barra de pestañas: se desliza con el dedo, sin barra visible */
-  #root div[style*="overflow-x: auto"]{-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  #root div[style*="overflow-x: auto"]::-webkit-scrollbar{height:0}
-
-  /* 8. Tablas de cómputo: compactas y con scroll propio */
-  #root table{font-size:10px!important}
-  #root table th,#root table td{padding:3px 5px!important;white-space:nowrap}
-}
-
-@media (max-width:420px){
-  #root button{font-size:9px!important;padding:2px 5px!important}
-  #root input,#root select{font-size:12px!important;padding:5px 7px!important}
-}
 </style>
 </head>
 <body>
@@ -78,6 +35,100 @@ const C={
   accent:"#d97706",green:"#16a34a",red:"#dc2626",blue:"#2563eb",violet:"#7c3aed",
   cyan:"#0891b2",orange:"#ea580c",t1:"#0f172a",t2:"#475569",t3:"#94a3b8",
 };
+
+/* ══════════ BASE DE RENDIMIENTOS (hs/oficial y hs/ayudante por unidad) ══════════
+   Fuente: valores de referencia CIRCOT / CAC Argentina. Ajustá según tu zona y cuadrilla.
+   ══════════════════════════════════════════════════════════════════════════════════ */
+const REND_DB=[
+  // ── TRABAJOS PRELIMINARES ──────────────────────────────────────────
+  {cat:"Trabajos Preliminares",item:"Limpieza y desmonte terreno",und:"m²",of:0.05,ay:0.05},
+  {cat:"Trabajos Preliminares",item:"Replanteo con nivel óptico",und:"m²",of:0.03,ay:0.015},
+  {cat:"Trabajos Preliminares",item:"Cerco provisorio madera/chapa",und:"ml",of:0.4,ay:0.2},
+  {cat:"Trabajos Preliminares",item:"Demolición tabiques ladrillo",und:"m²",of:0.8,ay:0.4},
+  {cat:"Trabajos Preliminares",item:"Demolición losa H°A°",und:"m²",of:1.5,ay:0.75},
+  // ── MOVIMIENTO DE SUELOS ───────────────────────────────────────────
+  {cat:"Movimiento de Suelos",item:"Excavación manual — suelo blando",und:"m³",of:2.0,ay:1.0},
+  {cat:"Movimiento de Suelos",item:"Excavación manual — suelo duro",und:"m³",of:4.0,ay:2.0},
+  {cat:"Movimiento de Suelos",item:"Relleno y compactación manual",und:"m³",of:1.5,ay:0.75},
+  {cat:"Movimiento de Suelos",item:"Nivelación con rastras",und:"m²",of:0.10,ay:0.05},
+  // ── FUNDACIONES ────────────────────────────────────────────────────
+  {cat:"Fundaciones",item:"Cimientos corridos H°Ciclópeo",und:"m³",of:3.0,ay:1.5},
+  {cat:"Fundaciones",item:"Encadenado inferior H°A°",und:"ml",of:0.6,ay:0.3},
+  {cat:"Fundaciones",item:"Platea H°A° e=15cm",und:"m²",of:0.8,ay:0.4},
+  {cat:"Fundaciones",item:"Encofrado vigas de fundación",und:"m²",of:0.8,ay:0.4},
+  {cat:"Fundaciones",item:"Armadura fundaciones",und:"kg",of:0.07,ay:0.035},
+  // ── COLUMNAS ───────────────────────────────────────────────────────
+  {cat:"H°A° — Columnas",item:"Encofrado columnas",und:"m²",of:1.4,ay:0.7},
+  {cat:"H°A° — Columnas",item:"Armadura columnas",und:"kg",of:0.08,ay:0.04},
+  {cat:"H°A° — Columnas",item:"Hormigonado columnas",und:"m³",of:5.0,ay:2.5},
+  {cat:"H°A° — Columnas",item:"Columna hasta 3m (todo incluido)",und:"un",of:4.0,ay:2.0},
+  // ── VIGAS ──────────────────────────────────────────────────────────
+  {cat:"H°A° — Vigas",item:"Encofrado vigas",und:"m²",of:1.2,ay:0.6},
+  {cat:"H°A° — Vigas",item:"Armadura vigas",und:"kg",of:0.09,ay:0.045},
+  {cat:"H°A° — Vigas",item:"Hormigonado vigas",und:"m³",of:4.5,ay:2.25},
+  {cat:"H°A° — Vigas",item:"Viga 20×50 ml (todo incluido)",und:"ml",of:2.5,ay:1.25},
+  // ── LOSAS ──────────────────────────────────────────────────────────
+  {cat:"H°A° — Losas",item:"Encofrado losa con apuntalado",und:"m²",of:0.7,ay:0.35},
+  {cat:"H°A° — Losas",item:"Armadura losa e=12cm",und:"kg",of:0.07,ay:0.035},
+  {cat:"H°A° — Losas",item:"Hormigonado losa e=12cm",und:"m³",of:3.5,ay:1.75},
+  {cat:"H°A° — Losas",item:"Losa con viguetas pretensadas",und:"m²",of:1.2,ay:0.6},
+  {cat:"H°A° — Losas",item:"Desencofrado losa",und:"m²",of:0.25,ay:0.12},
+  // ── MAMPOSTERÍA ────────────────────────────────────────────────────
+  {cat:"Mampostería",item:"Muro ladrillo hueco 18cm",und:"m²",of:1.0,ay:0.5},
+  {cat:"Mampostería",item:"Muro ladrillo hueco 12cm",und:"m²",of:0.8,ay:0.4},
+  {cat:"Mampostería",item:"Muro ladrillo macizo 15cm",und:"m²",of:1.2,ay:0.6},
+  {cat:"Mampostería",item:"Muro block cemento 20cm",und:"m²",of:1.1,ay:0.55},
+  {cat:"Mampostería",item:"Tabique ladrillo hueco 8cm",und:"m²",of:0.6,ay:0.3},
+  {cat:"Mampostería",item:"Cerramiento ladrillo visto",und:"m²",of:1.5,ay:0.75},
+  // ── CUBIERTA ───────────────────────────────────────────────────────
+  {cat:"Cubierta",item:"Estructura madera (par + cabio)",und:"m²",of:0.8,ay:0.4},
+  {cat:"Cubierta",item:"Chapa acanalada galvanizada",und:"m²",of:0.25,ay:0.12},
+  {cat:"Cubierta",item:"Membrana asfáltica aluminizada 4mm",und:"m²",of:0.3,ay:0.15},
+  {cat:"Cubierta",item:"Teja colonial cemento",und:"m²",of:0.7,ay:0.35},
+  {cat:"Cubierta",item:"Steel deck (chapa colaborante)",und:"m²",of:0.4,ay:0.2},
+  {cat:"Cubierta",item:"Aislación térmica poliestireno",und:"m²",of:0.15,ay:0.07},
+  // ── CONTRAPISOS / CARPETAS ─────────────────────────────────────────
+  {cat:"Contrapisos / Carpetas",item:"Contrapiso H°Pobre e=8cm",und:"m²",of:0.3,ay:0.15},
+  {cat:"Contrapisos / Carpetas",item:"Carpeta niveladora e=3cm",und:"m²",of:0.25,ay:0.12},
+  {cat:"Contrapisos / Carpetas",item:"Radier H°Simple e=10cm",und:"m²",of:0.35,ay:0.17},
+  {cat:"Contrapisos / Carpetas",item:"Carpeta hidrófuga",und:"m²",of:0.3,ay:0.15},
+  // ── REVOQUES ───────────────────────────────────────────────────────
+  {cat:"Revoques",item:"Revoque interior grueso",und:"m²",of:0.35,ay:0.17},
+  {cat:"Revoques",item:"Revoque exterior impermeable",und:"m²",of:0.45,ay:0.22},
+  {cat:"Revoques",item:"Enlucido yeso interior",und:"m²",of:0.2,ay:0.1},
+  {cat:"Revoques",item:"Azotado hidrófugo",und:"m²",of:0.15,ay:0.07},
+  {cat:"Revoques",item:"Molduras y terminaciones",und:"ml",of:0.3,ay:0.15},
+  // ── PISOS / REVESTIMIENTOS ─────────────────────────────────────────
+  {cat:"Pisos / Revestimientos",item:"Porcelanato 60×60 (pegado)",und:"m²",of:0.7,ay:0.35},
+  {cat:"Pisos / Revestimientos",item:"Cerámico 40×40 (pegado)",und:"m²",of:0.55,ay:0.27},
+  {cat:"Pisos / Revestimientos",item:"Parquet/madera machihembrado",und:"m²",of:0.5,ay:0.25},
+  {cat:"Pisos / Revestimientos",item:"Vinílico/SPC flotante",und:"m²",of:0.2,ay:0.1},
+  {cat:"Pisos / Revestimientos",item:"Revestimiento pared cerámica",und:"m²",of:0.7,ay:0.35},
+  {cat:"Pisos / Revestimientos",item:"Piedra granítica pulida",und:"m²",of:1.0,ay:0.5},
+  {cat:"Pisos / Revestimientos",item:"Microcemento (2 capas)",und:"m²",of:0.4,ay:0.2},
+  // ── ABERTURAS ──────────────────────────────────────────────────────
+  {cat:"Aberturas",item:"Puerta placa interior (colocar)",und:"un",of:2.0,ay:1.0},
+  {cat:"Aberturas",item:"Puerta exterior madera (colocar)",und:"un",of:3.5,ay:1.75},
+  {cat:"Aberturas",item:"Ventana aluminio (colocar)",und:"un",of:2.5,ay:1.25},
+  {cat:"Aberturas",item:"Marco puerta madera",und:"un",of:1.5,ay:0.75},
+  {cat:"Aberturas",item:"Herrajes y burletes",und:"un",of:0.5,ay:0.25},
+  // ── INSTALACIÓN SANITARIA ──────────────────────────────────────────
+  {cat:"Instalación Sanitaria",item:"Cañería PVC desagüe ø110",und:"ml",of:0.4,ay:0.2},
+  {cat:"Instalación Sanitaria",item:"Cañería PVC desagüe ø50",und:"ml",of:0.3,ay:0.15},
+  {cat:"Instalación Sanitaria",item:"Cañería PPR agua fría/caliente",und:"ml",of:0.35,ay:0.17},
+  {cat:"Instalación Sanitaria",item:"Artefactos (inodoro+bidet+lav.)",und:"un",of:4.0,ay:2.0},
+  {cat:"Instalación Sanitaria",item:"Cámara séptica (armar)",und:"un",of:16.0,ay:8.0},
+  // ── INSTALACIÓN ELÉCTRICA ─────────────────────────────────────────
+  {cat:"Instalación Eléctrica",item:"Cañería eléctrica embutida",und:"ml",of:0.25,ay:0.12},
+  {cat:"Instalación Eléctrica",item:"Tomacorriente / interruptor",und:"un",of:0.5,ay:0.25},
+  {cat:"Instalación Eléctrica",item:"Tablero eléctrico (armar)",und:"un",of:8.0,ay:4.0},
+  {cat:"Instalación Eléctrica",item:"Luminaria embutida (colocar)",und:"un",of:0.4,ay:0.2},
+  // ── PINTURA ────────────────────────────────────────────────────────
+  {cat:"Pintura",item:"Pintura látex interior (2 manos)",und:"m²",of:0.12,ay:0.06},
+  {cat:"Pintura",item:"Pintura exterior membrana elastom.",und:"m²",of:0.18,ay:0.09},
+  {cat:"Pintura",item:"Barniz maderas interiores",und:"m²",of:0.15,ay:0.07},
+  {cat:"Pintura",item:"Esmalte sintético (metal/madera)",und:"m²",of:0.18,ay:0.09},
+];
 
 /* ══════════ PERSISTENCIA ══════════ */
 const SK='obracalc_pro_v4';
@@ -867,6 +918,69 @@ const toRaw=t=>({id:t.id,rubroId:t.rubroId,item:t.item,und:t.und,qty:t.qty,
   ...(t.solapa?{solapa:true}:{}),
   ...(t.fIniManual?{fIniManual:t.fIniManual}:{})});
 
+/* ══════════ PICKER DE RENDIMIENTOS ══════════ */
+function RendPicker({taskName,onApply,onClose}){
+  const [q,setQ]=useState('');
+  const [cat,setCat]=useState('');
+  const cats=[...new Set(REND_DB.map(r=>r.cat))];
+  const rows=REND_DB.filter(r=>
+    (cat?r.cat===cat:true)&&
+    (!q||(r.item+' '+r.cat+' '+r.und).toLowerCase().includes(q.toLowerCase()))
+  );
+  return(
+    <Modal title={`📊 Rendimientos → ${taskName}`} onClose={onClose} wide>
+      <div style={{marginBottom:"10px",display:"flex",gap:"8px",flexWrap:"wrap",alignItems:"center"}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar trabajo…"
+          autoFocus
+          style={{flex:"1 1 160px",border:`1px solid ${C.blue}55`,borderRadius:"6px",padding:"6px 10px",
+            background:`${C.blue}08`,color:C.t1,fontWeight:600,fontSize:"12px"}}/>
+        <select value={cat} onChange={e=>setCat(e.target.value)}
+          style={{flex:"0 0 auto",border:`1px solid ${C.border}`,borderRadius:"6px",padding:"6px 8px",
+            background:C.surface,color:C.t2,fontSize:"11px"}}>
+          <option value="">Todas las categorías</option>
+          {cats.map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div style={{fontSize:"9px",color:C.t3,marginBottom:"8px"}}>
+        Valores de referencia CIRCOT/CAC — hs por unidad de medición · Editables después de aplicar.
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:"11px"}}>
+          <thead><tr>
+            <TH>Categoría</TH><TH>Trabajo</TH><TH align="center">Und</TH>
+            <TH align="right" bg="#166534" w="70px">HS/OF</TH>
+            <TH align="right" bg="#075985" w="70px">HS/AY</TH>
+            <TH align="center" w="80px"></TH>
+          </tr></thead>
+          <tbody>
+            {rows.length===0&&(
+              <tr><td colSpan={6} style={{padding:"20px",textAlign:"center",color:C.t3,fontSize:"12px"}}>
+                Sin resultados para "{q}"
+              </td></tr>
+            )}
+            {rows.map((r,i)=>(
+              <tr key={i} style={{background:i%2===0?C.card:C.surface}}>
+                <TD col={C.t3} style={{fontSize:"10px",whiteSpace:"nowrap"}}>{r.cat}</TD>
+                <TD fw={600}>{r.item}</TD>
+                <TD align="center" col={C.t3}>{r.und}</TD>
+                <TD align="right" mono col={C.green} fw={700}>{r.of.toFixed(2)}</TD>
+                <TD align="right" mono col="#0369a1" fw={700}>{r.ay.toFixed(2)}</TD>
+                <td style={{padding:"4px 6px",textAlign:"center",borderBottom:`1px solid ${C.border2}`}}>
+                  <button onClick={()=>onApply(r.of,r.ay)}
+                    style={{background:C.accent,color:"white",border:"none",borderRadius:"5px",
+                      padding:"4px 10px",fontWeight:800,fontSize:"11px",cursor:"pointer"}}>
+                    Aplicar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Modal>
+  );
+}
+
 /* ══════════ VISTA PLAN DE OBRA ══════════ */
 function PlanObra({tc,setTareas,rec,setRec,cfg,setCfg,rubros,grupos,cuadGrupos,setCuadGrupos,cuadRubros,setCuadRubros,conflictos,erroresMap,proyecto,moItems,setMoItems,prof,nota=''}){
   const exportPDF=()=>{
@@ -927,6 +1041,7 @@ function PlanObra({tc,setTareas,rec,setRec,cfg,setCfg,rubros,grupos,cuadGrupos,s
   const [nv,setNv]=useState({rubroId:rubros[0]?.id||"",item:"",und:"m²",qty:1,hsOf:1,hsAy:.7,nOf:1,nAy:1,pred:"",obs:""});
   const [editTask,setEditTask]=useState(null);
   const [et,setEt]=useState({});
+  const [rendPick,setRendPick]=useState(null);
   // Vista ordenada por rubro (sólo para display, no modifica el array almacenado)
   // Orden visual que replica exactamente la jerarquía: grupos → rubros dentro de cada grupo → ítems del rubro
   const displayTc=sortByRubro
@@ -1162,6 +1277,7 @@ function PlanObra({tc,setTareas,rec,setRec,cfg,setCfg,rubros,grupos,cuadGrupos,s
                   <td style={{padding:"3px 6px",textAlign:"center",borderBottom:`1px solid ${C.border2}`,whiteSpace:"nowrap"}}>
                     {!sortByRubro&&<button onClick={()=>mover(t.id,-1)} style={{...btnS("#475569"),marginRight:"2px"}}>↑</button>}
                     {!sortByRubro&&<button onClick={()=>mover(t.id,1)} style={{...btnS("#475569"),marginRight:"2px"}}>↓</button>}
+                    {!isGL(t)&&<button onClick={()=>setRendPick(t.id)} style={{...btnS(C.violet),marginRight:"2px"}} title="Cargar rendimiento desde base de datos">📊</button>}
                     <button onClick={()=>openEdit(t)} style={{...btnS(C.cyan),marginRight:"2px"}}>✏</button>
                     <button onClick={()=>delItem(t.id)} style={btnS(C.red)}>✕</button>
                   </td>
@@ -1177,6 +1293,13 @@ function PlanObra({tc,setTareas,rec,setRec,cfg,setCfg,rubros,grupos,cuadGrupos,s
           </tr></tfoot>
         </table>
       </div>
+
+      {/* Modal rendimientos */}
+      {rendPick&&<RendPicker
+        taskName={tc.find(t=>t.id===rendPick)?.item||''}
+        onClose={()=>setRendPick(null)}
+        onApply={(of,ay)=>{setTareas(p=>p.map(t=>t.id===rendPick?{...toRaw(t),hsOf:of,hsAy:ay}:t));setRendPick(null);}}
+      />}
 
       {/* Modal edición completa */}
       {editTask&&(()=>{
